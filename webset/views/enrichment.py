@@ -25,9 +25,10 @@ class CreateEnrichmentView(APIView):
             result = EnrichmentService.create_enrichment(
                 webset_id=webset_id,
                 description=description,
+                user=request.user,
                 format_type=format_type,
                 options=options,
-                metadata=metadata
+                metadata=metadata,
             )
             
             return Response({
@@ -45,7 +46,7 @@ class GetEnrichmentView(APIView):
 
     def get(self, request, webset_id, enrichment_id):
         try:
-            result = EnrichmentService.get_enrichment(webset_id, enrichment_id)
+            result = EnrichmentService.get_enrichment(webset_id, enrichment_id, request.user)
             return Response({
                 'request_id': result['request_id'],
                 'data': result['data']
@@ -60,7 +61,7 @@ class DeleteEnrichmentView(APIView):
 
     def delete(self, request, webset_id, enrichment_id):
         try:
-            result = EnrichmentService.delete_enrichment(webset_id, enrichment_id)
+            result = EnrichmentService.delete_enrichment(webset_id, enrichment_id,request.user)
             return Response({
                 'request_id': result['request_id'],
                 'data': result['data']

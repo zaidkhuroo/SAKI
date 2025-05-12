@@ -8,10 +8,11 @@ from webset.models import APIRequestResponse
 
 class EnrichmentService:
     @staticmethod
-    def create_enrichment(webset_id, description, format_type="text", options=None, metadata=None):
+    def create_enrichment(webset_id, description, user,format_type="text",options=None, metadata=None):
         try:
             # Create a new request record
             request_record = APIRequestResponse.objects.create(
+                user=user,
                 request_body={
                     "webset_id": webset_id,
                     "description": description,
@@ -56,10 +57,11 @@ class EnrichmentService:
             raise Exception(f"Error processing enrichment request: {str(e)}")
 
     @staticmethod
-    def get_enrichment(webset_id, enrichment_id):
+    def get_enrichment(webset_id, enrichment_id, user):
         try:
             # Create a new request record
             request_record = APIRequestResponse.objects.create(
+                user=user,
                 request_body={
                     "webset_id": webset_id,
                     "enrichment_id": enrichment_id
@@ -103,10 +105,11 @@ class EnrichmentService:
             raise Exception(f"Error processing enrichment request: {str(e)}")
 
     @staticmethod
-    def delete_enrichment(webset_id, enrichment_id):
+    def delete_enrichment(webset_id, enrichment_id,user):
         try:
             # Create a new request record
             request_record = APIRequestResponse.objects.create(
+                user=user,
                 request_body={
                     "webset_id": webset_id,
                     "enrichment_id": enrichment_id,
