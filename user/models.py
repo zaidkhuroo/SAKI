@@ -2,10 +2,6 @@ from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
-import uuid
-
-from SakiProject import settings
-
 
 
 class UserManager(BaseUserManager):
@@ -29,7 +25,6 @@ class UserManager(BaseUserManager):
             raise ValueError('Superuser must have is_superuser=True.')
 
         return self.create_user(email, password, **extra_fields)
-
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -57,6 +52,7 @@ class UserProfile(models.Model):
     last_name = models.CharField(max_length=200)
     date_of_birth =models.DateField(null=True)
 
+
 class UserAddress(models.Model):
     user=models.OneToOneField(User,related_name="address",on_delete=models.CASCADE)
     street =models.CharField(max_length=200)
@@ -68,9 +64,11 @@ class UserAddress(models.Model):
     def __str__(self):
         return f'{self.street} + " " +{self.city} + " " + {self.pincode}'
 
+
 class PhoneOTP(models.Model):
     user = models.OneToOneField(User,to_field='id',on_delete=models.CASCADE)
     otp = models.IntegerField(max_length=6,null=True)
+
 
 class Meta:
     db_table = 'users'

@@ -1,18 +1,159 @@
+import asyncio
 import os
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
+
 import requests
+from asgiref.sync import sync_to_async
+from django.core import cache
+from django.db import transaction
 from dotenv import load_dotenv
 from exa_py import Exa
 from exa_py.websets.types import CreateWebsetParameters, CreateEnrichmentParameters
 
-from webset.tasks import create_webset_task
-from webset.models import APIRequestResponse
-import uuid
+from webset.models import APIRequestResponse, WebhookData
 import json
-from django.core.serializers.json import DjangoJSONEncoder
 from webset.constants.api_constants import  EXA_WEBSETS_ITEMS_URL, EXA_WEBSETS_ITEMS_LIST_URL
+from webset.tasks import DateTimeEncoder
 
 load_dotenv()
 exa = Exa(os.getenv('EXA_API_KEY'))
+import asyncio
+import json
+from functools import partial
+from concurrent.futures import ThreadPoolExecutor
+
+from django.db import transaction
+from django.core.cache import cache
+from asgiref.sync import sync_to_async
+
+
+class WebsetAsyncService:
+    def __init__(self):
+        self.executor = ThreadPoolExecutor(max_workers=10)
+        self.semaphore = asyncio.Semaphore(5)
+
+    async def create_webset_async(self, query):
+        request_id = None
+        try:
+            request_record = await self._create_request_record(query)
+            request_id = request_record.request_id
+
+            cache_key = f'webset_creation_{request_id}'
+            if cache.get(cache_key):
+                return {'request_id': request_id, 'status': 'duplicate_request'}
+            cache.set(cache_key, 'processing', timeout=300)
+
+            async with self.semaphore:
+                loop = asyncio.get_event_loop()
+                webset = await loop.run_in_executor(
+                    self.executor,
+                    partial(self._create_exa_webset, query)
+                )
+
+                request_record = await self._get_request_record_for_update(request_id)
+                if not request_record:
+                    raise Exception("Request record not found")
+
+                response_data = {
+                    "webset_id": webset.id,
+                    "status": "completed",
+                    "data": json.loads(json.dumps(webset.model_dump(), cls=DateTimeEncoder))
+                }
+
+                await self._update_request_record(request_record, response_data)
+                await self._create_webhook_data(request_id, webset, response_data)
+
+            cache.delete(cache_key)
+            return {'request_id': request_id, 'data': response_data}
+
+        except Exception as e:
+            print(f"Error in create_webset_async: {str(e)}")
+            if request_id:
+                await self._handle_error(request_id, str(e))
+                cache.delete(f'webset_creation_{request_id}')
+            raise
+
+    async def get_creation_status(self, request_id):
+        """Get the status of a webset creation request"""
+        try:
+            request_record = await APIRequestResponse.objects.aget(request_id=request_id)
+            return {
+                'request_id': str(request_record.request_id),
+                'status': request_record.status,
+                'response': request_record.response_body,
+                'error': request_record.error_message
+            }
+        except APIRequestResponse.DoesNotExist:
+            raise Exception(f"Request with ID {request_id} not found")
+
+    # ----------------- SYNC WRAPPED METHODS -----------------
+
+    @sync_to_async
+    def _create_request_record(self, query):
+        with transaction.atomic():
+            return APIRequestResponse.objects.create(
+                request_method='POST',
+                request_path='/api/webset/create',
+                request_body=query,
+                status='processing'
+            )
+
+    @sync_to_async
+    def _get_request_record_for_update(self, request_id):
+        with transaction.atomic():
+            return APIRequestResponse.objects.select_for_update().filter(
+                request_id=request_id
+            ).first()
+
+    @sync_to_async
+    def _update_request_record(self, request_record, response_data):
+        with transaction.atomic():
+            request_record.response_body = response_data
+            request_record.status = 'completed'
+            request_record.save()
+
+    @sync_to_async
+    def _handle_error(self, request_id, error_message):
+        with transaction.atomic():
+            record = APIRequestResponse.objects.select_for_update().filter(
+                request_id=request_id
+            ).first()
+            if record:
+                record.status = 'failed'
+                record.error_message = error_message
+                record.save()
+
+    # ----------------- EXA API CALL -----------------
+
+    def _create_exa_webset(self, query):
+        webset = exa.websets.create(
+            params=CreateWebsetParameters(
+                search={
+                    "query": query,
+                    "count": 5
+                },
+                enrichments=[
+                    CreateEnrichmentParameters(
+                        description="LinkedIn profile of VP of Engineering or related role",
+                        format="text",
+                    ),
+                ],
+            )
+        )
+        return exa.websets.wait_until_idle(webset.id)
+
+    # ----------------- ASYNC ORM CREATE -----------------
+
+    @staticmethod
+    async def _create_webhook_data(request_id, webset, response_data):
+        await WebhookData.objects.acreate(
+            request_id=request_id,
+            event="webset.created",
+            status="completed",
+            payload=json.dumps(response_data)
+        )
+
 
 #Response of creating a webset
 """
@@ -74,64 +215,139 @@ exa = Exa(os.getenv('EXA_API_KEY'))
 }
 """
 
-class WebsetServiceAsync:
-    @staticmethod
-    def create_webset(request_data):
-        try:
-            # Create a new request record
-            request_record = APIRequestResponse.objects.create(
-                request_body=request_data
-            )
-            
-            # Your existing create_webset logic here
-            # For example:
-            response_data = {
-                # ... your existing response data ...
-            }
-            
-            # Update the request record with the response
-            request_record.response_body = response_data
-            request_record.status = 'pe'
-            request_record.save()
-            
-            # Return response with request_id
-            return {
-                'request_id': str(request_record.request_id),
-                'data': response_data
-            }
-            
-        except Exception as e:
-            # Update request record with error
-            if 'request_record' in locals():
-                request_record.status = 'failed'
-                request_record.error_message = str(e)
-                request_record.save()
-            
-            raise Exception(f"Error creating webset: {str(e)}")
 
-    @staticmethod
-    def get_request_status(request_id):
-        try:
-            request_record = APIRequestResponse.objects.get(request_id=request_id)
-            return {
-                'request_id': str(request_record.request_id),
-                'status': request_record.status,
-                'response': request_record.response_body,
-                'error': request_record.error_message,
-                'created_at': request_record.created_at,
-                'updated_at': request_record.updated_at
-            }
-        except APIRequestResponse.DoesNotExist:
-            raise Exception(f"Request with ID {request_id} not found")
-        except Exception as e:
-            raise Exception(f"Error retrieving request status: {str(e)}")
+# class WebsetAysncService:
+#     def __init__(self):
+#         self.executor = ThreadPoolExecutor(max_workers=10)  # Adjust based on your needs
+#         self.semaphore = asyncio.Semaphore(5)  # Limit concurrent EXA api calls
+#
+#     async def create_webset_async(self, query):
+#         request_id = None
+#         try:
+#             # Create request record with select_for_update to prevent race conditions
+#             with transaction.atomic():
+#                 request_record = APIRequestResponse.objects.create(
+#                     request_method='POST',
+#                     request_path='/api/webset/create',
+#                     request_body=query,
+#                     status='processing'
+#                 )
+#                 request_id = request_record.request_id
+#
+#             # Use cache to prevent duplicate processing
+#             cache_key = f'webset_creation_{request_id}'
+#             if cache.get(cache_key):
+#                 return {'request_id': request_id, 'status': 'duplicate_request'}
+#             cache.set(cache_key, 'processing', timeout=300)  # 5 minutes timeout
+#
+#             async with self.semaphore:  # Limit concurrent API calls
+#                 # Execute EXA API call in thread pool
+#                 loop = asyncio.get_event_loop()
+#                 webset = await loop.run_in_executor(
+#                     self.executor,
+#                     partial(self._create_exa_webset, query)
+#                 )
+#
+#                 # Update request record atomically
+#                 with transaction.atomic():
+#                     request_record = await self._get_request_record_for_update(request_id)
+#                     if not request_record:
+#                         raise Exception("Request record not found")
+#
+#                     response_data = {
+#                         "webset_id": webset.id,
+#                         "status": "completed",
+#                         "data": json.loads(json.dumps(webset.model_dump(), cls=DateTimeEncoder))
+#                     }
+#
+#                     # Update with select_for_update to prevent race conditions
+#                     request_record.response_body = response_data
+#                     request_record.status = 'completed'
+#                     request_record.save()
+#
+#                     # Create webhook data
+#                     await self._create_webhook_data(request_id, webset, response_data)
+#
+#                 cache.delete(cache_key)
+#                 return {'request_id': request_id, 'data': response_data}
+#
+#         except Exception as e:
+#             print(f"Error in create_webset_async: {str(e)}")
+#             if request_id:
+#                 await self._handle_error(request_id, str(e))
+#             cache.delete(f'webset_creation_{request_id}')
+#             raise
+#
+#
+#     @staticmethod
+#     @transaction.atomic
+#     @sync_to_async
+#     def _get_request_record_for_update(request_id):
+#         return  APIRequestResponse.objects.select_for_update().filter(
+#             request_id=request_id
+#         ).first()
+#
+#     def _create_exa_webset(self, query):
+#         """Execute EXA API call in thread pool"""
+#         webset = exa.websets.create(
+#             params=CreateWebsetParameters(
+#                 search={
+#                     "query": query,
+#                     "count": 5
+#                 },
+#                 enrichments=[
+#                     CreateEnrichmentParameters(
+#                         description="LinkedIn profile of VP of Engineering or related role",
+#                         format="text",
+#                     ),
+#                 ],
+#             )
+#         )
+#         return exa.websets.wait_until_idle(webset.id)
+#
+#     @staticmethod
+#     async def _create_webhook_data(request_id, webset, response_data):
+#         await WebhookData.objects.acreate(
+#             request_id=request_id,
+#             event="webset.created",
+#             status="completed",
+#             payload=json.dumps(response_data)
+#         )
+#
+#
+#     @staticmethod
+#     async def _handle_error(request_id, error_message):
+#         """Handle errors and update request record"""
+#         with transaction.atomic():
+#             request_record = await APIRequestResponse.objects.select_for_update().filter(
+#                 request_id=request_id
+#             ).afirst()
+#             if request_record:
+#                 request_record.status = 'failed'
+#                 request_record.error_message = error_message
+#                 await request_record.asave()
+#
+#     async def get_creation_status(self, request_id):
+#         """Get the status of a webset creation request"""
+#         try:
+#             request_record = await APIRequestResponse.objects.aget(request_id=request_id)
+#             return {
+#                 'request_id': str(request_record.request_id),
+#                 'status': request_record.status,
+#                 'response': request_record.response_body,
+#                 'error': request_record.error_message
+#             }
+#         except APIRequestResponse.DoesNotExist:
+#             raise Exception(f"Request with ID {request_id} not found")
 
 
-def create_webset(request_data):
+# sycn implementation
+def create_webset(request_data,user):
     try:
         # Create a new request record
         request_record = APIRequestResponse.objects.create(
-            request_body=request_data
+            request_body=request_data,
+            user=user
         )
 
         # Your existing create_webset logic here
@@ -192,7 +408,6 @@ def create_webset(request_data):
         raise Exception(f"Error creating webset: {str(e)}")
     # create_webset_task.delay(query)
 
-
 def get_webset(webset_id):
     webset = exa.websets.get(webset_id)
 
@@ -206,7 +421,6 @@ def get_webset(webset_id):
         print(f"Item: {item.model_dump_json(indent=2)}")
 
     return items.data
-
 
 def update_webset(webset_id):
     try:

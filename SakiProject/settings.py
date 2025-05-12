@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'user',
     'sso',
     'webset',
+    'channels'
 ]
 
 MIDDLEWARE = [
@@ -123,6 +124,16 @@ SOCIAL_AUTH_PIPELINE = (
 )
 
 WSGI_APPLICATION = 'SakiProject.wsgi.application'
+# Add Channels configuration
+ASGI_APPLICATION = "SakiProject.asgi.application"
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
 
 
 # Database
@@ -132,10 +143,28 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3_1',
+        'OPTIONS': {
+            'timeout': 20,  # Set timeout in seconds (default is 5)
+        },
+
     }
 }
 
-
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG',  # Logs database queries
+        },
+    },
+}
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 

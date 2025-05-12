@@ -1,20 +1,15 @@
 import json
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.core.exceptions import ValidationError
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import permission_classes, api_view
 import requests
-import os
 from dotenv import load_dotenv
 from rest_framework.response import Response
 from rest_framework import status
-
-from exaai.utils import result_to_dict
+from django.http import JsonResponse
+from django.core.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from django.core.serializers.json import DjangoJSONEncoder
 from webset.services import websetService, openAIService
-from webset.services.websetService import WebsetServiceAsync
+from webset.services.websetService import WebsetAsyncService
 from webset.utils import convert_string_to_json
 from webset.constants.api_constants import (
     EXA_WEBSETS_UPDATE_URL,
@@ -35,7 +30,7 @@ class CreateWebsetView(APIView):
 
     def post(self, request):
         try:
-            result = websetService.create_webset(request.data)
+            result = websetService.create_webset(request.data,request.user)
             return Response({
                 'request_id': result['request_id'],
                 'message': 'Webset creation initiated',
@@ -221,7 +216,7 @@ class ListWebsetsView(APIView):
 class WebsetRequestStatusView(APIView):
     def get(self, request, request_id):
         try:
-            result = WebsetServiceAsync.get_request_status(request_id)
+            result = WebsetAsyncService.get_creation_status(request_id)
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({
@@ -273,3 +268,89 @@ class ListWebsetItemsView(APIView):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+class LatestAPIRequestStatusView(APIView):
+    def get(self, request, request_id):
+        try:
+            # Get the latest record for the given request_id
+            latest_request = APIRequestResponse.objects.filter(
+                request_id=request_id
+            ).order_by('-created_at').first()
+
+            if not latest_request:
+                return Response({
+                    'error': f'No records found for request_id: {request_id}'
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            response_data = {
+                'request_id': str(latest_request.request_id),
+                'status': latest_request.status,
+                'request_body': latest_request.request_body,
+                'response_body': latest_request.response_body,
+                'error_message': latest_request.error_message,
+                'created_at': latest_request.created_at,
+                'updated_at': latest_request.updated_at
+            }
+
+            return Response(json.loads(
+                json.dumps(response_data, cls=DjangoJSONEncoder)
+            ), status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'error': f'Error retrieving request status: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from webset.models import APIRequestResponse
+from webset.services.websetService import exa
+import json
+
+
+class ListUserWebsetsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            # Get the authenticated user
+            user = request.user
+
+            # Fetch all APIRequestResponse entries for the user where websets are completed
+            user_requests = APIRequestResponse.objects.filter(user=user)
+
+            websets_data = []
+            webset_id = None
+
+            # Iterate over each response and fetch data from EXA
+            for request_entry in user_requests:
+                try:
+                    # Extract API response
+                    response_body = json.loads(request_entry.response_body)
+
+                    webset_id = response_body['data'][0]['webset_id']
+
+                    # Fetch details of the webset from EXA
+                    webset = exa.websets.get(id=webset_id)
+
+                        # Add webset details to the response list
+                    websets_data.append(webset.model_dump())
+                except Exception as e:
+                    # Log and skip webset if fetching fails
+                    print(f"Error fetching webset {webset_id}: {str(e)}")
+                    continue
+
+            # Return the list of websets
+            return Response({
+                'success': True,
+                'message': 'User websets fetched successfully.',
+                'data': websets_data
+            }, status=200)
+
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=500)

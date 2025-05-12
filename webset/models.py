@@ -2,10 +2,17 @@ from django.db import models
 from django.utils import timezone
 import uuid
 
+from user.models import User
+
+
 # Create your models here.
 
 class APIRequestResponse(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     request_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    request_method = models.CharField(max_length=10,null=True,blank=True)
+    request_path = models.CharField(max_length=200,null=True,blank=True)
+    task_id = models.CharField(max_length=100, null=True, blank=True)
     request_body = models.JSONField()
     response_body = models.JSONField(null=True, blank=True)
     status = models.CharField(max_length=20, default='pending')  # pending, completed, failed
@@ -25,7 +32,7 @@ class APIRequestResponse(models.Model):
 
 class WebhookData(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    request_id = models.UUIDField(unique=True)
+    request_id = models.UUIDField()
     event = models.CharField(max_length=100)
     status = models.CharField(max_length=50)
     payload = models.JSONField()
@@ -45,3 +52,11 @@ class WebhookData(models.Model):
 
     def __str__(self):
         return f"Webhook {self.request_id} - {self.event}"
+
+
+class WebsetUserMapping(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    webset_id = models.CharField(max_length=100)
+    request_id = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

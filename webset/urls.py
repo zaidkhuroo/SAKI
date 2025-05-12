@@ -7,10 +7,11 @@ from .views.webset import (
     ListWebsetsView,
     WebsetRequestStatusView,
     GetWebsetItemView,
-    ListWebsetItemsView,
+    ListWebsetItemsView, LatestAPIRequestStatusView, ListUserWebsetsView,
 )
 from .views.enrichment import CreateEnrichmentView, GetEnrichmentView, DeleteEnrichmentView
 from .views.webhook import GetEventView, CreateWebhookView, UpdateWebhookView, WebhookHandlerView
+from .views.webset_async import AsyncWebsetCreateView, AsyncConcurrentWebsetCreateView, GetRequestStatusView
 
 urlpatterns = [
     path('create/', CreateWebsetView.as_view(), name='create-webset'),
@@ -18,6 +19,7 @@ urlpatterns = [
     path('update/<str:webset_id>/', UpdateWebsetsView.as_view(), name='update-websets'),
     path('generate-search-criteria/', GenerateSearchCriteriaView.as_view(), name='generate-search-criteria'),
     path('list/', ListWebsetsView.as_view(), name='list-websets'),
+    path('all/', ListUserWebsetsView.as_view(), name='all-websets'),
     path('status/<uuid:request_id>/', WebsetRequestStatusView.as_view(), name='webset-request-status'),
     path('items/<str:webset_id>/<str:item_id>/', GetWebsetItemView.as_view(), name='get-webset-item'),
     path('items/<str:webset_id>/', ListWebsetItemsView.as_view(), name='list-webset-items'),
@@ -28,4 +30,10 @@ urlpatterns = [
     path('webhooks/', CreateWebhookView.as_view(), name='create-webhook'),
     path('webhooks/<str:webhook_id>/', UpdateWebhookView.as_view(), name='update-webhook'),
     path('webhooks/receive/', WebhookHandlerView.as_view(), name='receive-webhook'),
+    path('create/async/', AsyncWebsetCreateView.as_view(), name='async-webset-create'),
+    path('request-status/<uuid:request_id>/', LatestAPIRequestStatusView.as_view(), name='latest-request-status'),
+    path('status/', GetRequestStatusView.as_view(), name='get-request-status'),
+    # Async webset creation endpoints
+    path('async1/create/', AsyncConcurrentWebsetCreateView.as_view(), name='async-webset-create'),
+
 ]
