@@ -227,7 +227,7 @@ class WebsetRequestStatusView(APIView):
 class GetWebsetItemView(APIView):
     def get(self, request, webset_id, item_id):
         try:
-            result = WebsetItemService.get_webset_item(webset_id, item_id)
+            result = WebsetItemService.get_webset_item(webset_id, item_id,request.user)
             return Response({
                 'request_id': result['request_id'],
                 'data': result['data']
@@ -249,6 +249,7 @@ class ListWebsetItemsView(APIView):
             
             result = WebsetItemService.list_webset_items(
                 webset_id=webset_id,
+                user=request.user,
                 cursor=cursor,
                 limit=limit
             )

@@ -461,11 +461,12 @@ def update_webset(webset_id):
 
 class WebsetItemService:
     @staticmethod
-    def get_webset_item(webset_id, item_id):
+    def get_webset_item(webset_id, item_id,user):
         request_record={}
         try:
             # Create a new request record
             request_record = APIRequestResponse.objects.create(
+                user=user,
                 request_body={
                     "webset_id": webset_id,
                     "item_id": item_id
@@ -510,11 +511,12 @@ class WebsetItemService:
 
 
     @staticmethod
-    def list_webset_items(webset_id, cursor='1', limit="25"):
+    def list_webset_items(webset_id,user, cursor='1', limit="25"):
         request_record ={}
         try:
             # Create a new request record
             request_record = APIRequestResponse.objects.create(
+                user=user,
                 request_body={
                     "webset_id": webset_id,
                     "cursor": cursor,
@@ -535,8 +537,7 @@ class WebsetItemService:
             }
             
             response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            
+
             response_data = response.json()
             
             # Update the request record with the response
