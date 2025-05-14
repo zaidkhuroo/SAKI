@@ -7,7 +7,7 @@ from .views.webset import (
     ListWebsetsView,
     WebsetRequestStatusView,
     GetWebsetItemView,
-    ListWebsetItemsView, LatestAPIRequestStatusView, ListUserWebsetsView,
+    ListWebsetItemsView, LatestAPIRequestStatusView, ListUserWebsetsView, PublicListWebsetItemsView,
 )
 from .views.enrichment import CreateEnrichmentView, GetEnrichmentView, DeleteEnrichmentView
 from .views.webhook import GetEventView, CreateWebhookView, UpdateWebhookView, WebhookHandlerView
@@ -23,6 +23,7 @@ urlpatterns = [
     path('status/<uuid:request_id>/', WebsetRequestStatusView.as_view(), name='webset-request-status'),
     path('items/<str:webset_id>/<str:item_id>/', GetWebsetItemView.as_view(), name='get-webset-item'),
     path('items/<str:webset_id>/', ListWebsetItemsView.as_view(), name='list-webset-items'),
+
     path('enrichments/<str:webset_id>/', CreateEnrichmentView.as_view(), name='create-enrichment'),
     path('enrichments/<str:webset_id>/<str:enrichment_id>/', GetEnrichmentView.as_view(), name='get-enrichment'),
     path('enrichments/<str:webset_id>/<str:enrichment_id>/', DeleteEnrichmentView.as_view(), name='delete-enrichment'),
@@ -35,5 +36,10 @@ urlpatterns = [
     path('status/', GetRequestStatusView.as_view(), name='get-request-status'),
     # Async webset creation endpoints
     path('async1/create/', AsyncConcurrentWebsetCreateView.as_view(), name='async-webset-create'),
+
+
+
+    #public urls
+    path('public/items/<str:webset_id>/', PublicListWebsetItemsView.as_view(), name='public-list-webset-items'),
 
 ]

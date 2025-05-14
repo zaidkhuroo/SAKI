@@ -14,6 +14,7 @@ from exa_py.websets.types import CreateWebsetParameters, CreateEnrichmentParamet
 from webset.models import APIRequestResponse, WebhookData
 import json
 from webset.constants.api_constants import  EXA_WEBSETS_ITEMS_URL, EXA_WEBSETS_ITEMS_LIST_URL
+from webset.services.enrichmentService import EnrichmentService
 from webset.tasks import DateTimeEncoder
 
 load_dotenv()
@@ -539,6 +540,19 @@ class WebsetItemService:
             response = requests.get(url, headers=headers)
 
             response_data = response.json()
+
+            enrichment_id_title_map ={}
+            for item in response_data["data"]:
+                for enrichment in item["enrichments"]:
+                    print(enrichment)
+                    id = enrichment["enrichmentId"]
+                    if enrichment_id_title_map.get(id) is not None:
+                        enrichment["title"] = enrichment_id_title_map[id];
+                    else:
+                        response = EnrichmentService.get_enrichment( webset_id,id,user)
+                        enrichment["title"] = response["data"]["title"]
+
+
             
             # Update the request record with the response
             response_data["webset_id"]=webset_id

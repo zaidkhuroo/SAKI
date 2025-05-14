@@ -1,5 +1,6 @@
 import json
 import requests
+from django.contrib.auth import get_user
 from dotenv import load_dotenv
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,6 +9,8 @@ from django.core.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from django.core.serializers.json import DjangoJSONEncoder
+
+from user.models import User
 from webset.services import websetService, openAIService
 from webset.services.websetService import WebsetAsyncService
 from webset.utils import convert_string_to_json
@@ -260,6 +263,43 @@ class ListWebsetItemsView(APIView):
                 'pagination': result['pagination']
             }, status=status.HTTP_200_OK)
             
+        except ValueError as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PublicListWebsetItemsView(APIView):
+
+    def get(self, request, webset_id):
+        try:
+            # Get pagination parameters with defaults
+            cursor = request.query_params.get('cursor', '1')
+            limit = int(request.query_params.get('limit', 25))
+            # Create or retrieve a public dummy user
+            public_user, _ = User.objects.get_or_create(
+                    email= "public_user@example.com",
+                    is_active= True,
+
+            )
+
+            result = WebsetItemService.list_webset_items(
+                webset_id=webset_id,
+                user=public_user,
+                cursor=cursor,
+                limit=limit
+            )
+
+            return Response({
+                'request_id': result['request_id'],
+                'data': result['data'],
+                'pagination': result['pagination']
+            }, status=status.HTTP_200_OK)
+
         except ValueError as e:
             return Response({
                 'error': str(e)
