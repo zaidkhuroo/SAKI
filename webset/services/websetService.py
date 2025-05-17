@@ -96,16 +96,44 @@ def create_webset(query):
     return items.data
 
 
-def get_webset(webset_id):
-    webset = exa.websets.get(webset_id)
+def get_webset(webset_id, requested_page_no=1, limit=1):
+    paged_webset_items = get_paged_webset(webset_id, requested_page_no,limit)
 
-
+    if paged_webset_items:
+      for item in paged_webset_items.data:
+        print(f"Item: {item.model_dump_json(indent=2)}")
+      return paged_webset_items.data
+    return None
     # Wait until Webset completes processing
     #webset = exa.websets.wait_until_idle(webset.id)
 
-    # Retrieve Webset Items
-    items = exa.websets.items.list(webset_id=webset_id)
-    for item in items.data:
-        print(f"Item: {item.model_dump_json(indent=2)}")
+    # # Retrieve Webset Items
+    # items = exa.websets.items.list(webset_id=webset_id)
+    # # Get page number
+    # # import pdb; pdb.set_trace()
+    # for item in items.data:
+    #     print(f"Item: {item.model_dump_json(indent=2)}")
 
-    return items.data
+    # return items.data
+
+def get_paged_webset(webset_id, requested_page_no=1, limit=1):
+    webset = exa.websets.get(webset_id)
+
+    current_page = 1
+    cursor=None
+
+    while True:
+      items = exa.websets.items.list(
+        webset_id=webset_id,
+          limit=limit,
+          cursor=cursor
+      )
+
+      cursor = items.next_cursor
+
+      if current_page == requested_page_no:
+        return items
+      current_page = current_page + 1
+    
+      if items.next_cursor == None:
+         return None

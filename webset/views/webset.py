@@ -37,9 +37,12 @@ def create_webset(request):
 
 
 def get_webset(request,webset_id):
+    page = int(request.GET.get("page") or 1)
+    limit = int(request.GET.get("limit") or 5)
+
     if request.method == "GET":
         # TO BE CHECKED
-        result = websetService.get_webset(webset_id)
+        result = websetService.get_webset(webset_id, requested_page_no=page, limit=limit)
         if result:
             response = {
                 "success": True,
