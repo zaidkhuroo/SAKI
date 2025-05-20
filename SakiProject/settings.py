@@ -30,22 +30,30 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'corsheaders',
-    'social_django',
-    'celery',
-    'allauth',
-    'user',
-    'sso',
-    'webset',
-    'channels'
+'django.contrib.admin',
+'django.contrib.auth',
+'django.contrib.contenttypes',
+'django.contrib.sessions',
+'django.contrib.messages',
+'django.contrib.staticfiles',
+'rest_framework',
+'rest_framework_simplejwt',
+'django.contrib.sites',
+'allauth',
+'allauth.account',
+'allauth.socialaccount',
+'allauth.socialaccount.providers.google',
+'rest_framework.authtoken',
+'dj_rest_auth',
+'dj_rest_auth.registration',
+'corsheaders',
+'social_django',
+'celery',
+'user',
+'sso',
+'webset',
+'channels'
+    
 ]
 
 MIDDLEWARE = [
@@ -58,7 +66,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',  # From social-auth-app-django
-
+    'allauth.account.middleware.AccountMiddleware',
     # 🆕 Add our custom exception middleware
     'SakiProject.middleware.ExceptionMiddleware',
 
@@ -86,6 +94,7 @@ TEMPLATES = [
         },
     },
 ]
+SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
     'social_core.backends.google.GoogleOAuth2',
@@ -96,10 +105,12 @@ AUTHENTICATION_BACKENDS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication', #optional, can be removed as it generates key
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
 
+REST_USE_JWT = True
 # JWT Settings
 from datetime import timedelta
 SIMPLE_JWT = {
@@ -108,8 +119,9 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
 }
-
-
+REST_AUTH_REGISTER_SERIALIZERS = {
+    'REGISTER_SERIALIZER': 'users.serializers.CustomRegisterSerializer',
+}
 
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
@@ -224,6 +236,13 @@ SOCIALACCOUNT_PROVIDERS = {
 EXA_API_KEY = os.getenv('EXA_API_KEY')
 OPEN_AI_KEY = os.getenv('OPEN_AI_KEY')
 # Social Auth Settings
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # Set to 'mandatory' in production
+
+
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv('GOOGLE_CLIENT_ID')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 

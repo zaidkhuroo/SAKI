@@ -11,6 +11,9 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import logout, get_user_model
 from django.contrib.auth.hashers import make_password
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from dj_rest_auth.registration.views import SocialLoginView
+from rest_framework_simplejwt.tokens import RefreshToken
 import secrets
 import string
 from .serializers import (
@@ -23,6 +26,31 @@ from .serializers import (
 from .models import User, UserProfile, UserAddress
 
 User = get_user_model()
+
+class GoogleLogin(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+
+    def post(self, request, *args, **kwargs):
+        # let allauth & dj-rest-auth validate Google token & set self.user
+        super().post(request, *args, **kwargs)
+        user = self.user
+
+        # ensure a profile exists (optional)
+        UserProfile.objects.get_or_create(user=user)
+
+        # issue JWTs
+        refresh = RefreshToken.for_user(user)
+
+        # build response exactly like your other flow, but only id/email/date_joined
+        return Response({
+            "user": {
+                "id":          user.id,
+                "email":       user.email,
+                "date_joined": user.date_joined,
+            },
+            "access_token":  str(refresh.access_token),
+            "refresh_token": str(refresh),
+        })
 
 class UserInfoView(View):
     @method_decorator(login_required)

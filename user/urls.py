@@ -5,10 +5,12 @@ from .views import (
     UserLogoutView,
     UserInfoView,
     AdminUserView,
-    AdminUserDetailView
+    AdminUserDetailView,
+    GoogleLogin
 )
 
 urlpatterns = [
+    path('auth/google/', GoogleLogin.as_view(), name='google_login'),
     path('register/', UserRegistrationView.as_view(), name='register'),
     path('login/', UserLoginView.as_view(), name='login'),
     path('logout/', UserLogoutView.as_view(), name='logout'),

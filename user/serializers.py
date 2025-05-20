@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, UserProfile, UserAddress
+# users/serializers.py
+from dj_rest_auth.registration.serializers import RegisterSerializer
+from rest_framework import serializers
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -64,4 +67,20 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'date_joined', 'profile', 'address') 
+        fields = ('email', 'date_joined', 'profile', 'address')
+
+
+
+
+class CustomRegisterSerializer(RegisterSerializer):
+    username = None  # remove username field
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+
+    def get_cleaned_data(self):
+        data = super().get_cleaned_data()
+        data['first_name'] = self.validated_data.get('first_name', '')
+        data['last_name'] = self.validated_data.get('last_name', '')
+        return data
+
+ 
