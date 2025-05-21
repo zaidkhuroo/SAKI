@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from social_django.context_processors import backends
+# from social_django.context_processors import backends
 
 urlpatterns = [
     path('', include('user.urls'), name='home'),
@@ -24,7 +24,7 @@ urlpatterns = [
     path('exa/', include('exaai.urls')),
     path('websets/', include('webset.urls')),
     path('sso/', include('sso.urls')),
-    path('social-auth/', include('social_django.urls', namespace='social')),
+    # path('social-auth/', include('social_django.urls', namespace='social')),
 
 ]
 

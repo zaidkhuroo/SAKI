@@ -47,10 +47,10 @@ INSTALLED_APPS = [
 'dj_rest_auth',
 'dj_rest_auth.registration',
 'corsheaders',
-'social_django',
+# 'social_django',
 'celery',
 'user',
-'sso',
+# 'sso',
 'webset',
 'channels'
     
@@ -65,7 +65,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'social_django.middleware.SocialAuthExceptionMiddleware',  # From social-auth-app-django
+    # 'social_django.middleware.SocialAuthExceptionMiddleware',  # From social-auth-app-django
     'allauth.account.middleware.AccountMiddleware',
     # 🆕 Add our custom exception middleware
     'SakiProject.middleware.ExceptionMiddleware',
@@ -88,8 +88,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'social_django.context_processors.backends',
-                'social_django.context_processors.login_redirect',
+                # 'social_django.context_processors.backends',
+                # 'social_django.context_processors.login_redirect',
             ],
         },
     },
@@ -97,9 +97,9 @@ TEMPLATES = [
 SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
-    'social_core.backends.google.GoogleOAuth2',
-    'social_core.backends.linkedin.LinkedinOAuth2',
-    'social_core.backends.microsoft.MicrosoftOAuth2',
+    # 'social_core.backends.google.GoogleOAuth2',
+    # 'social_core.backends.linkedin.LinkedinOAuth2',
+    # 'social_core.backends.microsoft.MicrosoftOAuth2',
     'django.contrib.auth.backends.ModelBackend',
 ]
 
@@ -123,17 +123,17 @@ REST_AUTH_REGISTER_SERIALIZERS = {
     'REGISTER_SERIALIZER': 'users.serializers.CustomRegisterSerializer',
 }
 
-SOCIAL_AUTH_PIPELINE = (
-    'social_core.pipeline.social_auth.social_details',
-    'social_core.pipeline.social_auth.social_uid',
-    'social_core.pipeline.social_auth.auth_allowed',
-    'social_core.pipeline.social_auth.social_user',
-    'social_core.pipeline.user.get_username',
-    'social_core.pipeline.user.create_user',
-    'social_core.pipeline.social_auth.associate_user',
-    'social_core.pipeline.social_auth.load_extra_data',
-    'social_core.pipeline.user.user_details',
-)
+# SOCIAL_AUTH_PIPELINE = (
+#     'social_core.pipeline.social_auth.social_details',
+#     'social_core.pipeline.social_auth.social_uid',
+#     'social_core.pipeline.social_auth.auth_allowed',
+#     'social_core.pipeline.social_auth.social_user',
+#     'social_core.pipeline.user.get_username',
+#     'social_core.pipeline.user.create_user',
+#     'social_core.pipeline.social_auth.associate_user',
+#     'social_core.pipeline.social_auth.load_extra_data',
+#     'social_core.pipeline.user.user_details',
+# )
 
 WSGI_APPLICATION = 'SakiProject.wsgi.application'
 # Add Channels configuration
@@ -231,6 +231,9 @@ SOCIALACCOUNT_PROVIDERS = {
             'key': ''
         },
         'SCOPE': ['email', 'profile'],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
     },
 }
 EXA_API_KEY = os.getenv('EXA_API_KEY')
@@ -243,15 +246,15 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # Set to 'mandatory' in production
 
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv('GOOGLE_CLIENT_ID')
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+# SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv('GOOGLE_CLIENT_ID')
+# SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 
-SOCIAL_AUTH_LINKEDIN_OAUTH2_KEY = os.getenv('LINKEDIN_CLIENT_ID')
-SOCIAL_AUTH_LINKEDIN_OAUTH2_SECRET = os.getenv('LINKEDIN_CLIENT_SECRET')
+# SOCIAL_AUTH_LINKEDIN_OAUTH2_KEY = os.getenv('LINKEDIN_CLIENT_ID')
+# SOCIAL_AUTH_LINKEDIN_OAUTH2_SECRET = os.getenv('LINKEDIN_CLIENT_SECRET')
 
-SOCIAL_AUTH_MICROSOFT_KEY = os.getenv('MICROSOFT_CLIENT_ID')
-SOCIAL_AUTH_MICROSOFT_SECRET = os.getenv('MICROSOFT_CLIENT_SECRET')
-SOCIAL_AUTH_URL_NAMESPACE = 'social'
+# SOCIAL_AUTH_MICROSOFT_KEY = os.getenv('MICROSOFT_CLIENT_ID')
+# SOCIAL_AUTH_MICROSOFT_SECRET = os.getenv('MICROSOFT_CLIENT_SECRET')
+# SOCIAL_AUTH_URL_NAMESPACE = 'social'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 

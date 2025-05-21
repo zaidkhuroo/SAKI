@@ -41,12 +41,17 @@ class GoogleLogin(SocialLoginView):
         # issue JWTs
         refresh = RefreshToken.for_user(user)
 
+        extra_data = user.socialaccount_set.first().extra_data if user.socialaccount_set.exists() else {}
+
         # build response exactly like your other flow, but only id/email/date_joined
         return Response({
             "user": {
                 "id":          user.id,
                 "email":       user.email,
                 "date_joined": user.date_joined,
+                "first_name": extra_data.get("given_name", ""), 
+                "last_name": extra_data.get("family_name", ""), 
+                "profile_picture": extra_data.get("picture"),  # Get profile pic from Google response
             },
             "access_token":  str(refresh.access_token),
             "refresh_token": str(refresh),
