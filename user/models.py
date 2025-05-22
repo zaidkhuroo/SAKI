@@ -3,9 +3,6 @@ from django.contrib.auth.models import BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
 
-from SakiProject import settings
-
-
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -30,12 +27,15 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)
+    is_admin = models.BooleanField(default=False)
+    api_key = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     objects = UserManager()
 
@@ -43,7 +43,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = []  # You can add more like 'first_name', 'last_name'
 
     def __str__(self):
-        return self.email
+        return f"{self.email} ({'Admin' if self.is_admin else 'User'})"
 
 
 class UserProfile(models.Model):
@@ -51,6 +51,7 @@ class UserProfile(models.Model):
     first_name = models.CharField(max_length=200)
     last_name = models.CharField(max_length=200)
     date_of_birth =models.DateField(null=True)
+
 
 class UserAddress(models.Model):
     user=models.OneToOneField(User,related_name="address",on_delete=models.CASCADE)
@@ -63,6 +64,16 @@ class UserAddress(models.Model):
     def __str__(self):
         return f'{self.street} + " " +{self.city} + " " + {self.pincode}'
 
+
 class PhoneOTP(models.Model):
     user = models.OneToOneField(User,to_field='id',on_delete=models.CASCADE)
     otp = models.IntegerField(max_length=6,null=True)
+
+
+class Meta:
+    db_table = 'users'
+    indexes = [
+        models.Index(fields=['is_admin']),
+        models.Index(fields=['api_key']),
+        models.Index(fields=['username']),
+    ]
