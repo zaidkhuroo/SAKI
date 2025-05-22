@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, UserProfile, UserAddress
-# users/serializers.py
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from rest_framework import serializers
 
@@ -69,9 +68,6 @@ class UserDetailSerializer(serializers.ModelSerializer):
         model = User
         fields = ('email', 'date_joined', 'profile', 'address')
 
-
-
-
 class CustomRegisterSerializer(RegisterSerializer):
     username = None  # remove username field
     first_name = serializers.CharField(required=True)
@@ -84,3 +80,4 @@ class CustomRegisterSerializer(RegisterSerializer):
         return data
 
  
+

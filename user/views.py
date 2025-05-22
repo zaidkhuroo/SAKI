@@ -26,7 +26,6 @@ from .serializers import (
 from .models import User, UserProfile, UserAddress
 
 User = get_user_model()
-
 class GoogleLogin(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
 
@@ -34,9 +33,6 @@ class GoogleLogin(SocialLoginView):
         # let allauth & dj-rest-auth validate Google token & set self.user
         super().post(request, *args, **kwargs)
         user = self.user
-
-        # ensure a profile exists (optional)
-        UserProfile.objects.get_or_create(user=user)
 
         # issue JWTs
         refresh = RefreshToken.for_user(user)

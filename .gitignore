@@ -22,3 +22,4 @@ db.sqlite3_1
 # OS specific files
 .DS_Store
 Thumbs.db
+venv
