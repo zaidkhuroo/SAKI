@@ -45,6 +45,8 @@ prompt= """
         ]
     }
     
+    Respond only in valid JSON format like this: {"key": "value"}
+    
     Examples:
     
     User input:"Software engineer in SF who have 5+ years exp in Python, Django, worked in B2B SAAS"
